@@ -808,7 +808,7 @@ class CheckersGame {
 
     getBestMove() {
         const depth = this.aiDifficulty === 'easy' ? 1 :
-                      this.aiDifficulty === 'medium' ? 3 : 7; // Expert: profondeur 7
+                      this.aiDifficulty === 'medium' ? 3 : 9; // Expert: profondeur 9 (très difficile)
 
         const moves = this.getAllMoves('white');
 
