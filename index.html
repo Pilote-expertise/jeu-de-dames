@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4fc3f7">
+    <meta name="description" content="Jeu de dames classique avec IA et règles personnalisables">
+    <title>Jeu de Dames</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+    <!-- Écran d'accueil -->
+    <div class="welcome-screen" id="welcome-screen">
+        <div class="welcome-content">
+            <div class="welcome-logo">
+                <div class="logo-piece black"></div>
+                <div class="logo-piece white"></div>
+            </div>
+            <h1>Jeu de Dames</h1>
+
+            <div class="welcome-section">
+                <h2>Mode de jeu</h2>
+                <div class="game-mode-selector">
+                    <button class="mode-btn active" data-mode="pvp" id="mode-pvp">
+                        <span class="mode-icon">👥</span>
+                        <span class="mode-text">2 Joueurs</span>
+                    </button>
+                    <button class="mode-btn" data-mode="ai" id="mode-ai">
+                        <span class="mode-icon">🤖</span>
+                        <span class="mode-text">Vs Ordinateur</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="welcome-section players-section">
+                <h2>Joueurs</h2>
+                <div class="player-input">
+                    <div class="input-group">
+                        <div class="player-color-indicator black"></div>
+                        <input type="text" id="player1-name" placeholder="Prénom joueur 1 (Noir)" maxlength="15">
+                    </div>
+                    <div class="input-group" id="player2-group">
+                        <div class="player-color-indicator white"></div>
+                        <input type="text" id="player2-name" placeholder="Prénom joueur 2 (Blanc)" maxlength="15">
+                    </div>
+                </div>
+            </div>
+
+            <div class="welcome-section ai-section hidden" id="ai-section">
+                <h2>Niveau de l'ordinateur</h2>
+                <div class="difficulty-selector">
+                    <button class="diff-btn" data-diff="easy">
+                        <span class="diff-stars">⭐</span>
+                        <span>Débutant</span>
+                    </button>
+                    <button class="diff-btn active" data-diff="medium">
+                        <span class="diff-stars">⭐⭐</span>
+                        <span>Intermédiaire</span>
+                    </button>
+                    <button class="diff-btn" data-diff="hard">
+                        <span class="diff-stars">⭐⭐⭐</span>
+                        <span>Expert</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="welcome-section">
+                <h2>Options des règles</h2>
+                <div class="rules-options">
+                    <label class="option-toggle">
+                        <input type="checkbox" id="option-mandatory-capture" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="option-label">Capture obligatoire</span>
+                    </label>
+                    <label class="option-toggle">
+                        <input type="checkbox" id="option-visual-hints" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="option-label">Aide visuelle</span>
+                    </label>
+                    <label class="option-toggle" id="soufflee-option">
+                        <input type="checkbox" id="option-soufflee">
+                        <span class="toggle-slider"></span>
+                        <span class="option-label">Règle soufflée (perd le pion si capture ignorée)</span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="btn btn-start" id="start-game-btn">
+                <span>Commencer la partie</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Écran de jeu -->
+    <div class="game-container hidden" id="game-container">
+        <header class="game-header">
+            <h1>Jeu de Dames</h1>
+            <div class="score-board">
+                <div class="player-score player-black">
+                    <div class="player-indicator black-piece"></div>
+                    <span class="player-name" id="display-player1">Noir</span>
+                    <span class="captured-count" id="black-captured">0</span>
+                </div>
+                <div class="turn-indicator" id="turn-indicator">
+                    <span>Tour:</span>
+                    <div class="current-turn black-piece" id="current-turn"></div>
+                    <span class="current-player-name" id="current-player-name"></span>
+                </div>
+                <div class="player-score player-white">
+                    <div class="player-indicator white-piece"></div>
+                    <span class="player-name" id="display-player2">Blanc</span>
+                    <span class="captured-count" id="white-captured">0</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="game-board-container">
+            <div class="board" id="board"></div>
+        </main>
+
+        <div class="game-controls">
+            <button class="btn btn-restart" id="restart-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                    <path d="M3 3v5h5"/>
+                </svg>
+                Nouvelle Partie
+            </button>
+            <button class="btn btn-menu" id="menu-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+                Menu
+            </button>
+            <button class="btn btn-rules" id="rules-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 16v-4"/>
+                    <path d="M12 8h.01"/>
+                </svg>
+                Règles
+            </button>
+        </div>
+
+        <div class="game-message" id="game-message"></div>
+    </div>
+
+    <!-- Modal des règles -->
+    <div class="modal" id="rules-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <h2>Règles du Jeu de Dames</h2>
+            <div class="rules-content">
+                <section>
+                    <h3>Objectif</h3>
+                    <p>Capturer tous les pions adverses ou les bloquer pour qu'ils ne puissent plus bouger.</p>
+                </section>
+                <section>
+                    <h3>Déplacement des pions</h3>
+                    <ul>
+                        <li>Les pions se déplacent en diagonale vers l'avant</li>
+                        <li>Un pion ne peut avancer que d'une case à la fois</li>
+                        <li>Les pions ne peuvent se déplacer que sur les cases foncées</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Capture</h3>
+                    <ul>
+                        <li>Pour capturer, sautez par-dessus un pion adverse adjacent</li>
+                        <li>La capture peut être obligatoire selon les options choisies</li>
+                        <li>Les captures multiples sont possibles</li>
+                        <li>Les pions peuvent capturer vers l'arrière</li>
+                    </ul>
+                </section>
+                <section>
+                    <h3>Règle soufflée</h3>
+                    <p>Si activée et qu'un joueur ne capture pas alors qu'il le pouvait, le pion qui aurait dû capturer est retiré du jeu.</p>
+                </section>
+                <section>
+                    <h3>Promotion en Dame</h3>
+                    <ul>
+                        <li>Un pion qui atteint la dernière rangée devient une Dame</li>
+                        <li>La Dame peut se déplacer en diagonale dans toutes les directions</li>
+                        <li>La Dame peut parcourir plusieurs cases d'un coup</li>
+                        <li>La Dame capture à distance en sautant par-dessus l'adversaire</li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de fin de partie -->
+    <div class="modal" id="winner-modal">
+        <div class="modal-content winner-content">
+            <div class="winner-trophy" id="winner-trophy">🏆</div>
+            <h2 id="winner-text">Victoire!</h2>
+            <p id="winner-description"></p>
+            <button class="btn btn-play-again" id="play-again-btn">Rejouer</button>
+            <button class="btn btn-back-menu" id="back-menu-btn">Retour au menu</button>
+        </div>
+    </div>
+
+    <!-- Modal soufflée -->
+    <div class="modal" id="soufflee-modal">
+        <div class="modal-content soufflee-content">
+            <div class="soufflee-icon">💨</div>
+            <h2>Pion soufflé!</h2>
+            <div class="soufflee-visual">
+                <div class="soufflee-piece-preview" id="soufflee-piece-preview"></div>
+                <span style="font-size: 2rem;">➜</span>
+                <span style="font-size: 2rem;">❌</span>
+            </div>
+            <p id="soufflee-description"></p>
+            <button class="btn btn-ok" id="soufflee-ok-btn">Compris</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
