@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Générateur d'icônes - Jeu de Dames</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .icons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        canvas {
+            border: 2px solid #4fc3f7;
+            border-radius: 10px;
+        }
+        button {
+            background: #4fc3f7;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #29b6f6;
+        }
+        h1 {
+            color: #4fc3f7;
+        }
+        .instructions {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            margin: 20px auto;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Générateur d'icônes</h1>
+    <p>Cliquez sur "Générer toutes les icônes" puis téléchargez chaque icône</p>
+
+    <button onclick="generateAllIcons()">Générer toutes les icônes</button>
+
+    <div class="icons-container" id="icons-container"></div>
+
+    <div class="instructions">
+        <h3>Instructions :</h3>
+        <ol>
+            <li>Cliquez sur "Générer toutes les icônes"</li>
+            <li>Faites un clic droit sur chaque icône → "Enregistrer l'image sous..."</li>
+            <li>Sauvegardez dans le dossier <code>icons/</code> avec le bon nom</li>
+        </ol>
+    </div>
+
+    <script>
+        const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+
+        function drawIcon(ctx, size) {
+            const scale = size / 512;
+
+            // Background
+            const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+            bgGrad.addColorStop(0, '#1a1a2e');
+            bgGrad.addColorStop(1, '#16213e');
+
+            // Rounded rectangle background
+            ctx.beginPath();
+            const radius = 80 * scale;
+            ctx.moveTo(radius, 0);
+            ctx.lineTo(size - radius, 0);
+            ctx.quadraticCurveTo(size, 0, size, radius);
+            ctx.lineTo(size, size - radius);
+            ctx.quadraticCurveTo(size, size, size - radius, size);
+            ctx.lineTo(radius, size);
+            ctx.quadraticCurveTo(0, size, 0, size - radius);
+            ctx.lineTo(0, radius);
+            ctx.quadraticCurveTo(0, 0, radius, 0);
+            ctx.closePath();
+            ctx.fillStyle = bgGrad;
+            ctx.fill();
+
+            // Board pattern
+            ctx.globalAlpha = 0.3;
+            ctx.fillStyle = '#8b4513';
+            const cellSize = 88 * scale;
+            const positions = [
+                [80, 80], [256, 80],
+                [168, 168], [344, 168],
+                [80, 256], [256, 256],
+                [168, 344], [344, 344]
+            ];
+            positions.forEach(([x, y]) => {
+                ctx.fillRect(x * scale, y * scale, cellSize, cellSize);
+            });
+            ctx.globalAlpha = 1;
+
+            // Black piece (top left)
+            const blackGrad = ctx.createLinearGradient(115 * scale, 115 * scale, 225 * scale, 225 * scale);
+            blackGrad.addColorStop(0, '#2d2d2d');
+            blackGrad.addColorStop(1, '#0d0d0d');
+
+            ctx.beginPath();
+            ctx.arc(170 * scale, 170 * scale, 55 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = blackGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 4 * scale;
+            ctx.stroke();
+
+            // Highlight on black piece
+            ctx.beginPath();
+            ctx.ellipse(170 * scale, 165 * scale, 35 * scale, 20 * scale, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fill();
+
+            // White piece (bottom right)
+            const whiteGrad = ctx.createLinearGradient(287 * scale, 287 * scale, 397 * scale, 397 * scale);
+            whiteGrad.addColorStop(0, '#ffffff');
+            whiteGrad.addColorStop(1, '#d4d4d4');
+
+            ctx.beginPath();
+            ctx.arc(342 * scale, 342 * scale, 55 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = whiteGrad;
+            ctx.fill();
+            ctx.strokeStyle = '#aaa';
+            ctx.lineWidth = 4 * scale;
+            ctx.stroke();
+
+            // Highlight on white piece
+            ctx.beginPath();
+            ctx.ellipse(342 * scale, 337 * scale, 35 * scale, 20 * scale, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fill();
+
+            // King piece (center) - rotated square
+            ctx.save();
+            ctx.translate(256 * scale, 256 * scale);
+            ctx.rotate(Math.PI / 4);
+
+            const kingGrad = ctx.createLinearGradient(-50 * scale, -50 * scale, 50 * scale, 50 * scale);
+            kingGrad.addColorStop(0, '#2d2d2d');
+            kingGrad.addColorStop(1, '#0d0d0d');
+
+            // Rounded rect for king
+            const kingSize = 100 * scale;
+            const kingRadius = 15 * scale;
+            ctx.beginPath();
+            ctx.moveTo(-kingSize/2 + kingRadius, -kingSize/2);
+            ctx.lineTo(kingSize/2 - kingRadius, -kingSize/2);
+            ctx.quadraticCurveTo(kingSize/2, -kingSize/2, kingSize/2, -kingSize/2 + kingRadius);
+            ctx.lineTo(kingSize/2, kingSize/2 - kingRadius);
+            ctx.quadraticCurveTo(kingSize/2, kingSize/2, kingSize/2 - kingRadius, kingSize/2);
+            ctx.lineTo(-kingSize/2 + kingRadius, kingSize/2);
+            ctx.quadraticCurveTo(-kingSize/2, kingSize/2, -kingSize/2, kingSize/2 - kingRadius);
+            ctx.lineTo(-kingSize/2, -kingSize/2 + kingRadius);
+            ctx.quadraticCurveTo(-kingSize/2, -kingSize/2, -kingSize/2 + kingRadius, -kingSize/2);
+            ctx.closePath();
+            ctx.fillStyle = kingGrad;
+            ctx.fill();
+
+            const goldGrad = ctx.createLinearGradient(-50 * scale, -50 * scale, 50 * scale, 50 * scale);
+            goldGrad.addColorStop(0, '#ffd700');
+            goldGrad.addColorStop(1, '#ff8c00');
+            ctx.strokeStyle = goldGrad;
+            ctx.lineWidth = 5 * scale;
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Crown on king
+            ctx.font = `${50 * scale}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffd700';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 4 * scale;
+            ctx.shadowOffsetY = 2 * scale;
+            ctx.fillText('♛', 256 * scale, 260 * scale);
+            ctx.shadowBlur = 0;
+
+            // Accent circle
+            ctx.beginPath();
+            ctx.arc(256 * scale, 256 * scale, 200 * scale, 0, Math.PI * 2);
+            ctx.strokeStyle = '#4fc3f7';
+            ctx.lineWidth = 3 * scale;
+            ctx.globalAlpha = 0.3;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+        }
+
+        function generateAllIcons() {
+            const container = document.getElementById('icons-container');
+            container.innerHTML = '';
+
+            sizes.forEach(size => {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                drawIcon(ctx, size);
+
+                const div = document.createElement('div');
+                div.className = 'icon-item';
+
+                const label = document.createElement('span');
+                label.textContent = `icon-${size}.png`;
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.textContent = 'Télécharger';
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.download = `icon-${size}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+
+                div.appendChild(canvas);
+                div.appendChild(label);
+                div.appendChild(downloadBtn);
+                container.appendChild(div);
+            });
+        }
+
+        // Generate on load
+        window.onload = generateAllIcons;
+    </script>
+</body>
+</html>
