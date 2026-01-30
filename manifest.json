@@ -1,8 +1,10 @@
 {
+  "id": "com.jeudedames.app",
   "name": "Jeu de Dames",
   "short_name": "Dames",
   "description": "Jeu de dames classique avec IA et règles personnalisables",
-  "start_url": "/index.html",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1a1a2e",
@@ -49,6 +51,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow"
     }
   ],
   "categories": ["games", "entertainment"],
