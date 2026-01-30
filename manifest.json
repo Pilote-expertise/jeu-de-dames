@@ -6,9 +6,15 @@
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "orientation": "portrait",
+  "dir": "ltr",
+  "lang": "fr-FR",
   "background_color": "#1a1a2e",
   "theme_color": "#4fc3f7",
+  "iarc_rating_id": "",
+  "prefer_related_applications": false,
+  "related_applications": [],
   "icons": [
     {
       "src": "icons/icon-72.png",
@@ -58,9 +64,16 @@
       "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Jeu de Dames - Mobile"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Jeu de Dames - Desktop"
     }
   ],
-  "categories": ["games", "entertainment"],
-  "lang": "fr-FR"
+  "categories": ["games", "entertainment"]
 }
