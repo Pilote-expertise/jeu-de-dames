@@ -1,9 +1,10 @@
-const CACHE_NAME = 'jeu-de-dames-v1';
+const CACHE_NAME = 'jeu-de-dames-v4';
 const urlsToCache = [
   './',
   './index.html',
   './styles.css',
   './game.js',
+  './ai-worker.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'

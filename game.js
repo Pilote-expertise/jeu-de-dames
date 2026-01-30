@@ -7,14 +7,14 @@ class CheckersGame {
     constructor() {
         this.BOARD_SIZE = 10;
         this.board = [];
-        this.currentPlayer = 'black';
+        this.currentPlayer = 'white';
         this.selectedPiece = null;
         this.validMoves = [];
         this.captureSequence = false;
         this.capturedPieces = { black: 0, white: 0 };
         this.mustCapture = [];
         this.gameOver = false;
-        this.pieceThatMustCapture = null; // Pour la règle soufflée
+        this.pieceThatMustCapture = null; // Pour la regle soufflee
 
         // Timer pour captures multiples
         this.captureTimer = null;
@@ -34,7 +34,35 @@ class CheckersGame {
         this.visualHints = true;
         this.souffleeRule = false;
 
+        // Web Worker pour l'IA (calcul en arriere-plan)
+        this.aiWorker = null;
+        this.initAIWorker();
+
         this.setupWelcomeScreen();
+    }
+
+    initAIWorker() {
+        try {
+            this.aiWorker = new Worker('ai-worker.js');
+            this.aiWorker.onmessage = (e) => {
+                if (e.data.type === 'result') {
+                    this.handleAIResult(e.data.move);
+                }
+            };
+            this.aiWorker.onerror = (err) => {
+                console.warn('Web Worker non disponible, utilisation du mode fallback');
+                this.aiWorker = null;
+            };
+        } catch (e) {
+            console.warn('Web Worker non supporte, utilisation du mode fallback');
+            this.aiWorker = null;
+        }
+    }
+
+    handleAIResult(move) {
+        if (move) {
+            this.executeAIMove(move);
+        }
     }
 
     setupWelcomeScreen() {
@@ -245,7 +273,7 @@ class CheckersGame {
         if (this.gameOver) return;
 
         // Si c'est le tour de l'IA, ignorer les clics
-        if (this.gameMode === 'ai' && this.currentPlayer === 'white') return;
+        if (this.gameMode === 'ai' && this.currentPlayer === 'black') return;
 
         const piece = this.board[row][col];
 
@@ -692,7 +720,7 @@ class CheckersGame {
         this.updateUI();
         this.checkGameOver();
 
-        if (!this.gameOver && this.gameMode === 'ai' && this.currentPlayer === 'white') {
+        if (!this.gameOver && this.gameMode === 'ai' && this.currentPlayer === 'black') {
             this.playAI();
         }
     }
@@ -782,28 +810,187 @@ class CheckersGame {
     // ========================================
 
     playAI() {
-        const thinkingDiv = document.createElement('div');
-        thinkingDiv.className = 'ai-thinking';
-        thinkingDiv.id = 'ai-thinking';
-        thinkingDiv.innerHTML = `
-            <span>L'ordinateur réfléchit</span>
-            <div class="ai-thinking-dots">
-                <span></span><span></span><span></span>
-            </div>
-        `;
-        document.body.appendChild(thinkingDiv);
+        // Utiliser le Web Worker si disponible
+        if (this.aiWorker) {
+            this.aiWorker.postMessage({
+                type: 'calculate',
+                data: {
+                    board: this.board,
+                    aiDifficulty: this.aiDifficulty,
+                    mandatoryCapture: this.mandatoryCapture
+                }
+            });
+        } else {
+            // Mode fallback sans Web Worker
+            setTimeout(() => {
+                const move = this.getBestMoveFast();
+                if (move) {
+                    this.executeAIMove(move);
+                }
+            }, 10);
+        }
+    }
 
-        const delay = this.aiDifficulty === 'easy' ? 500 :
-                      this.aiDifficulty === 'medium' ? 800 : 1200;
+    // Version rapide du getBestMove pour le fallback (sans Web Worker)
+    getBestMoveFast() {
+        // Profondeurs: facile=1, moyen=4, expert=8
+        const depth = this.aiDifficulty === 'easy' ? 1 :
+                      this.aiDifficulty === 'medium' ? 4 : 8;
 
-        setTimeout(() => {
-            const move = this.getBestMove();
-            document.getElementById('ai-thinking').remove();
+        const moves = this.getAllMoves('black');
+        if (moves.length === 0) return null;
 
-            if (move) {
-                this.executeAIMove(move);
+        if (this.aiDifficulty === 'easy') {
+            const captures = moves.filter(m => m.move.isCapture);
+            if (captures.length > 0) {
+                return captures[Math.floor(Math.random() * captures.length)];
             }
-        }, delay);
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+
+        let bestMove = null;
+        let bestScore = Infinity;
+
+        const sortedMoves = this.sortMovesByPriority(moves);
+
+        for (const moveData of sortedMoves) {
+            const savedState = this.saveStateForUndo(moveData);
+            this.applyMoveForAI(moveData);
+
+            const score = this.minimaxFast(depth - 1, -Infinity, Infinity, true);
+
+            this.undoMoveForAI(savedState);
+
+            if (score < bestScore) {
+                bestScore = score;
+                bestMove = moveData;
+            }
+        }
+
+        return bestMove;
+    }
+
+    saveStateForUndo(moveData) {
+        const { fromRow, fromCol, move } = moveData;
+        return {
+            fromRow,
+            fromCol,
+            toRow: move.row,
+            toCol: move.col,
+            movedPiece: this.board[fromRow][fromCol] ?
+                { ...this.board[fromRow][fromCol] } : null,
+            capturedPiece: move.isCapture ?
+                (this.board[move.capturedRow][move.capturedCol] ?
+                    { ...this.board[move.capturedRow][move.capturedCol] } : null) : null,
+            capturedRow: move.capturedRow,
+            capturedCol: move.capturedCol,
+            wasKing: this.board[fromRow][fromCol] ?
+                this.board[fromRow][fromCol].isKing : false
+        };
+    }
+
+    applyMoveForAI(moveData) {
+        const { fromRow, fromCol, move } = moveData;
+        const piece = this.board[fromRow][fromCol];
+
+        this.board[move.row][move.col] = piece;
+        this.board[fromRow][fromCol] = null;
+
+        if (move.isCapture) {
+            this.board[move.capturedRow][move.capturedCol] = null;
+        }
+
+        if (piece && !piece.isKing) {
+            if ((piece.color === 'black' && move.row === this.BOARD_SIZE - 1) ||
+                (piece.color === 'white' && move.row === 0)) {
+                piece.isKing = true;
+            }
+        }
+    }
+
+    undoMoveForAI(state) {
+        this.board[state.fromRow][state.fromCol] = state.movedPiece;
+        if (state.movedPiece) {
+            state.movedPiece.isKing = state.wasKing;
+        }
+        this.board[state.toRow][state.toCol] = null;
+        if (state.capturedPiece) {
+            this.board[state.capturedRow][state.capturedCol] = state.capturedPiece;
+        }
+    }
+
+    minimaxFast(depth, alpha, beta, isMaximizing) {
+        if (depth === 0) {
+            return this.evaluateBoardFast();
+        }
+
+        const color = isMaximizing ? 'white' : 'black';
+        const moves = this.getAllMoves(color);
+
+        if (moves.length === 0) {
+            return isMaximizing ? -1000 : 1000;
+        }
+
+        if (isMaximizing) {
+            let maxScore = -Infinity;
+            for (const moveData of moves) {
+                const savedState = this.saveStateForUndo(moveData);
+                this.applyMoveForAI(moveData);
+                const score = this.minimaxFast(depth - 1, alpha, beta, false);
+                this.undoMoveForAI(savedState);
+
+                maxScore = Math.max(maxScore, score);
+                alpha = Math.max(alpha, score);
+                if (beta <= alpha) break;
+            }
+            return maxScore;
+        } else {
+            let minScore = Infinity;
+            for (const moveData of moves) {
+                const savedState = this.saveStateForUndo(moveData);
+                this.applyMoveForAI(moveData);
+                const score = this.minimaxFast(depth - 1, alpha, beta, true);
+                this.undoMoveForAI(savedState);
+
+                minScore = Math.min(minScore, score);
+                beta = Math.min(beta, score);
+                if (beta <= alpha) break;
+            }
+            return minScore;
+        }
+    }
+
+    // Evaluation rapide et simplifiee
+    evaluateBoardFast() {
+        let score = 0;
+
+        for (let row = 0; row < this.BOARD_SIZE; row++) {
+            for (let col = 0; col < this.BOARD_SIZE; col++) {
+                const piece = this.board[row][col];
+                if (!piece) continue;
+
+                let pieceValue = piece.isKing ? 5 : 1;
+
+                if (!piece.isKing) {
+                    if (piece.color === 'white') {
+                        pieceValue += (this.BOARD_SIZE - 1 - row) * 0.1;
+                    } else {
+                        pieceValue += row * 0.1;
+                    }
+                }
+
+                const centerDist = Math.abs(col - 4.5) + Math.abs(row - 4.5);
+                pieceValue += (5 - centerDist) * 0.05;
+
+                if (piece.color === 'white') {
+                    score += pieceValue;
+                } else {
+                    score -= pieceValue;
+                }
+            }
+        }
+
+        return score;
     }
 
     getBestMove() {
@@ -846,19 +1033,20 @@ class CheckersGame {
         return bestMove;
     }
 
-    // Trier les mouvements pour améliorer l'élagage alpha-beta (mode expert)
+    // Trier les mouvements pour ameliorer l'elagage alpha-beta (mode expert)
+    // L'IA joue les noirs, donc elle veut aller vers row 9 (promotion)
     sortMovesByPriority(moves) {
         return moves.sort((a, b) => {
-            // Priorité aux captures
+            // Priorite aux captures
             if (a.move.isCapture && !b.move.isCapture) return -1;
             if (!a.move.isCapture && b.move.isCapture) return 1;
 
-            // Priorité aux mouvements vers la promotion
+            // Priorite aux mouvements vers la promotion (row 9 pour les noirs)
             const aPromotionDist = a.move.row;
             const bPromotionDist = b.move.row;
-            if (aPromotionDist !== bPromotionDist) return aPromotionDist - bPromotionDist;
+            if (aPromotionDist !== bPromotionDist) return bPromotionDist - aPromotionDist;
 
-            // Priorité au centre
+            // Priorite au centre
             const aCenterDist = Math.abs(a.move.col - 4.5);
             const bCenterDist = Math.abs(b.move.col - 4.5);
             return aCenterDist - bCenterDist;
@@ -1305,7 +1493,7 @@ class CheckersGame {
     doRestart() {
         this.stopCaptureTimer();
         this.board = [];
-        this.currentPlayer = 'black';
+        this.currentPlayer = 'white';
         this.selectedPiece = null;
         this.validMoves = [];
         this.captureSequence = false;
